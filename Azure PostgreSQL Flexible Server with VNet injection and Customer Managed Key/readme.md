@@ -1,0 +1,2 @@
+# PostgreSQL Flexible Server with VNet injection and Customer Managed Key
+Demonstrates that it is not necessary to expose the instance of Azure Key Vault to any public access or through a private endpoint so that an instance of Azure Database for PostgreSQL Flexible Server can get to the key used for data encryption as long as the instance of AKV is set to **Allow trusted Microsoft services to bypass this firewall**.

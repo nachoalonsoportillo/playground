@@ -1,0 +1,8 @@
+$path = [System.Environment]::GetEnvironmentVariable('USERPROFILE') + "\.ssh\config"
+Add-Content -Path $path -Value @'
+
+Host ${hostname}
+  HostName ${hostname}
+  User ${user}
+  IdentityFile ${identityfile}
+'@
