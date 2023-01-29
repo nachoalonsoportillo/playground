@@ -103,7 +103,7 @@ resource "azurerm_network_security_rule" "nsr" {
 }
 
 # Manages the Network Security Group associations to default subnet
-resource "azurerm_subnet_network_security_group_association" "security_group_associations" {
+resource "azurerm_subnet_network_security_group_association" "security_group_association" {
   network_security_group_id = azurerm_network_security_group.nsg.id
   subnet_id                 = azurerm_subnet.default_subnet.id
 }
@@ -131,18 +131,19 @@ resource "azurerm_key_vault" "akv" {
 }
 
 # Manages the Key Vault Access Policy for the principal running this Terraform configuration
-resource "azurerm_key_vault_access_policy" "akv_access_policy1" {
+resource "azurerm_key_vault_access_policy" "akv_access_policy_terraform_principal" {
   tenant_id    = azurerm_key_vault.akv.tenant_id
   key_vault_id = azurerm_key_vault.akv.id
   object_id    = data.azurerm_client_config.current.object_id
   key_permissions = [
     "Create",
-    "Get"
+    "Get",
+    "Delete"
   ]
 }
 
 # Manages the Key Vault Access Policy for the PostgreSQL UAMI
-resource "azurerm_key_vault_access_policy" "akv_access_policy2" {
+resource "azurerm_key_vault_access_policy" "akv_access_policy_postgresql_principal" {
   tenant_id    = azurerm_key_vault.akv.tenant_id
   key_vault_id = azurerm_key_vault.akv.id
   object_id    = azurerm_user_assigned_identity.pgsql_uami.principal_id
@@ -202,7 +203,7 @@ resource "azurerm_private_dns_zone" "pgsqldnszone" {
 
 # Manages PostgreSQL private DNS zone link to VNet
 resource "azurerm_private_dns_zone_virtual_network_link" "default" {
-  name                  = "pdzvnetlink.com"
+  name                  = "linkpgsqlprivatednszonetovnet"
   private_dns_zone_name = azurerm_private_dns_zone.pgsqldnszone.name
   virtual_network_id    = azurerm_virtual_network.vnet.id
   resource_group_name   = azurerm_resource_group.rg.name
@@ -223,6 +224,8 @@ resource "azurerm_key_vault_key" "key" {
     "verify",
     "wrapKey",
   ]
+
+  depends_on = [azurerm_key_vault_access_policy.akv_access_policy_terraform_principal]
 }
 
 # Manages the Virtual Machine Public IP
@@ -286,7 +289,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
   connection {
     type        = "ssh"
     user        = self.admin_username
-    host        = self.public_ip_address
+    host        = data.azurerm_public_ip.vmpip.ip_address
     agent       = false
     private_key = tls_private_key.key.private_key_openssh
   }
@@ -302,5 +305,5 @@ resource "azurerm_linux_virtual_machine" "vm" {
     ]
   }
 
-  depends_on = [local_file.psql_script]
+  depends_on = [local_file.psql_script, azurerm_subnet_network_security_group_association.security_group_association]
 }
