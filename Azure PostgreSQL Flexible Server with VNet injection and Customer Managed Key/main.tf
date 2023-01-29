@@ -45,8 +45,6 @@ resource "azurerm_resource_group" "rg" {
   location = var.resource_group_location
 }
 
-data "azurerm_client_config" "current" {}
-
 # Manages the VNET
 resource "azurerm_virtual_network" "vnet" {
   name                = "vnet-${random_string.name.result}"
@@ -233,7 +231,8 @@ resource "azurerm_public_ip" "vmpip" {
   name                = "vmpip-${random_string.name.result}"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
-  allocation_method   = "Dynamic"
+  allocation_method   = "Static"
+  sku                 = "Standard"
 }
 
 # Manages the Virtual Machine NIC
@@ -275,7 +274,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
     sku       = "18.04-LTS"
     version   = "latest"
   }
-/*
+
   provisioner "local-exec" {
     command = templatefile("${local.host_os}-ssh-script.tftpl", {
       hostname     = self.public_ip_address
@@ -284,12 +283,11 @@ resource "azurerm_linux_virtual_machine" "vm" {
     })
     interpreter = local.host_os == "linux" ? ["bash", "-c"] : ["Powershell", "-Command"]
   }
-*/
 
   connection {
     type        = "ssh"
     user        = self.admin_username
-    host        = data.azurerm_public_ip.vmpip.ip_address
+    host        = self.public_ip_address
     agent       = false
     private_key = tls_private_key.key.private_key_openssh
   }
