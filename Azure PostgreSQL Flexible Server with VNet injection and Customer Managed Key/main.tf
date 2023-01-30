@@ -91,12 +91,12 @@ resource "azurerm_network_security_rule" "nsr" {
   network_security_group_name = azurerm_network_security_group.nsg.name
   access                      = "Allow"
   description                 = ""
-  destination_address_prefix  = "AzureCloud"
+  destination_address_prefix  = "${azurerm_network_interface.vmnic.private_ip_address}"
   destination_port_range      = "22"
   direction                   = "Inbound"
   priority                    = 100
   protocol                    = "Tcp"
-  source_address_prefix       = "*"
+  source_address_prefix       = "${local.client_ip_address}"
   source_port_range           = "*"
 }
 
@@ -123,7 +123,7 @@ resource "azurerm_key_vault" "akv" {
     bypass         = "AzureServices"
     default_action = "Deny"
     ip_rules = [
-      jsondecode(data.http.current_public_ip.response_body).ip
+      local.client_ip_address
     ]
   }
 }
@@ -268,26 +268,28 @@ resource "azurerm_linux_virtual_machine" "vm" {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
   }
+  
   source_image_reference {
     publisher = "Canonical"
     offer     = "UbuntuServer"
     sku       = "18.04-LTS"
     version   = "latest"
   }
-
+/*
   provisioner "local-exec" {
     command = templatefile("${local.host_os}-ssh-script.tftpl", {
-      hostname     = self.public_ip_address
+      hostname     = azurerm_public_ip.vmpip.ip_address
       user         = self.admin_username
       identityfile = "${path.module}/vmkey"
     })
     interpreter = local.host_os == "linux" ? ["bash", "-c"] : ["Powershell", "-Command"]
   }
+*/
 
   connection {
     type        = "ssh"
     user        = self.admin_username
-    host        = self.public_ip_address
+    host        = azurerm_public_ip.vmpip.ip_address
     agent       = false
     private_key = tls_private_key.key.private_key_openssh
   }
