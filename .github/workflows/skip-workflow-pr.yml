@@ -1,0 +1,16 @@
+name: Skip Wrokflow - PR
+
+on:
+  pull_request:
+    branches: [ main ]
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    name: build
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Build The Code
+        run: |
+          echo "Build The Code"
